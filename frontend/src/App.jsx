@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import {
     login,
     obtenerProductos,
-    crearPedido
+    crearPedido,
+    obtenerPedidos
 } from "./services/api";
 
 import "./App.css";
@@ -13,6 +14,10 @@ function App() {
 
     const [usuario, setUsuario] = useState(null);
     const [productos, setProductos] = useState([]);
+    const [pedidos, setPedidos] = useState([]);
+    const [vista, setVista] = useState("inicio");
+    const [pedidoCreado, setPedidoCreado] = useState(null);
+    const [cargandoPedidos, setCargandoPedidos] = useState(false);
 
     const [mensaje, setMensaje] = useState("");
     const [busqueda, setBusqueda] = useState("");
@@ -29,6 +34,34 @@ function App() {
             setProductos(data);
         } catch (error) {
             setMensaje(error.message);
+        }
+    }
+
+    function irAInicio() {
+        setVista("inicio");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function verProductos() {
+        setVista("productos");
+        window.setTimeout(() => {
+            document.getElementById("catalogo")?.scrollIntoView({
+                behavior: "smooth"
+            });
+        }, 0);
+    }
+
+    async function verMisPedidos() {
+        setVista("pedidos");
+        setMensaje("");
+        setCargandoPedidos(true);
+
+        try {
+            setPedidos(await obtenerPedidos(usuario.id));
+        } catch (error) {
+            setMensaje(error.message);
+        } finally {
+            setCargandoPedidos(false);
         }
     }
 
@@ -57,10 +90,8 @@ function App() {
                 ]
             );
 
-            setMensaje(
-                `Pedido #${pedido.id} creado correctamente. Total: $${pedido.total}`
-            );
-
+            setPedidoCreado(pedido);
+            setMensaje("");
             cargarProductos();
 
         } catch (error) {
@@ -70,6 +101,9 @@ function App() {
 
     function cerrarSesion() {
         setUsuario(null);
+        setPedidos([]);
+        setPedidoCreado(null);
+        setVista("inicio");
         setEmail("");
         setPassword("");
         setMensaje("");
@@ -205,9 +239,24 @@ function App() {
                     </div>
 
                     <div className="nav-links">
-                        <a className="active">Inicio</a>
-                        <a>Productos</a>
-                        <a>Mis pedidos</a>
+                        <button
+                            className={vista === "inicio" ? "active" : ""}
+                            onClick={irAInicio}
+                        >
+                            Inicio
+                        </button>
+                        <button
+                            className={vista === "productos" ? "active" : ""}
+                            onClick={verProductos}
+                        >
+                            Productos
+                        </button>
+                        <button
+                            className={vista === "pedidos" ? "active" : ""}
+                            onClick={verMisPedidos}
+                        >
+                            Mis pedidos
+                        </button>
                     </div>
 
                     <div className="user-menu">
@@ -236,7 +285,8 @@ function App() {
 
             {/* HERO */}
 
-            <section className="hero">
+            {vista === "inicio" && (
+                <section className="hero">
 
                 <div className="hero-content">
 
@@ -288,11 +338,13 @@ function App() {
 
                 </div>
 
-            </section>
+                </section>
+            )}
 
             {/* CONTENIDO */}
 
-            <main className="main-content" id="catalogo">
+            {vista !== "pedidos" ? (
+                <main className="main-content" id="catalogo">
 
                 <div className="section-header">
 
@@ -330,16 +382,33 @@ function App() {
                 {/* MENSAJE */}
 
                 {mensaje && (
-                    <div className="success-message">
-                        <span>✓</span>
-                        {mensaje}
-
-                        <button
-                            onClick={() => setMensaje("")}
-                        >
-                            ×
-                        </button>
+                    <div className="error-message page-error">
+                        ⚠ {mensaje}
                     </div>
+                )}
+
+                {pedidoCreado && (
+                    <section className="checkout-confirmation" role="status">
+                        <h2>Pedido creado correctamente.</h2>
+                        <p><strong>Pedido #{pedidoCreado.id}</strong></p>
+                        <p>
+                            Estado: <span className="order-status">Pendiente de Pago</span>
+                        </p>
+                        {pedidoCreado.notificaciones?.cliente ? (
+                            <>
+                                <p>Se ha enviado un comprobante a:</p>
+                                <strong>{usuario.email}</strong>
+                                <p>Revisa tu correo para consultar las instrucciones de pago.</p>
+                            </>
+                        ) : (
+                            <p className="email-warning">
+                                No se pudo enviar el comprobante a {usuario.email}. El pedido quedó guardado; revisa la configuración SMTP.
+                            </p>
+                        )}
+                        <p className="checkout-total">
+                            Total: ${Number(pedidoCreado.total).toFixed(2)}
+                        </p>
+                    </section>
                 )}
 
                 {/* PRODUCTOS */}
@@ -457,7 +526,72 @@ function App() {
 
                 )}
 
-            </main>
+                </main>
+            ) : (
+                <main className="main-content orders-view">
+                    <div className="section-header">
+                        <div>
+                            <span className="section-label">TU CUENTA</span>
+                            <h2>Mis pedidos</h2>
+                            <p>Consulta el estado y los detalles de tus compras.</p>
+                        </div>
+                    </div>
+
+                    {mensaje && (
+                        <div className="error-message page-error">
+                            ⚠ {mensaje}
+                        </div>
+                    )}
+
+                    {cargandoPedidos ? (
+                        <div className="empty-state"><p>Cargando tus pedidos...</p></div>
+                    ) : pedidos.length === 0 && !mensaje ? (
+                        <div className="empty-state">
+                            <div>📦</div>
+                            <h3>No tienes pedidos todavía.</h3>
+                        </div>
+                    ) : (
+                        <div className="orders-list">
+                            {pedidos.map((pedido) => (
+                                <article className="order-card" key={pedido.id}>
+                                    <div className="order-card-header">
+                                        <div>
+                                            <span className="section-label">PEDIDO</span>
+                                            <h3>#{pedido.id}</h3>
+                                        </div>
+                                        <span className="order-status">
+                                            {pedido.estado}
+                                        </span>
+                                    </div>
+                                    <p className="order-date">
+                                        Fecha: {pedido.fecha
+                                            ? new Date(pedido.fecha).toLocaleString("es-MX")
+                                            : "No disponible"}
+                                    </p>
+                                    <div className="order-products">
+                                        {pedido.detalles?.map((detalle, index) => (
+                                            <div
+                                                className="order-product"
+                                                key={detalle.id || `${detalle.producto_id}-${index}`}
+                                            >
+                                                <span>{detalle.producto || detalle.nombre}</span>
+                                                <span>
+                                                    {detalle.cantidad} × ${Number(
+                                                        detalle.precio_unitario ?? detalle.precioUnitario
+                                                    ).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="order-total">
+                                        Total: ${Number(pedido.total).toFixed(2)}
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </main>
+            )}
 
             {/* FOOTER */}
 

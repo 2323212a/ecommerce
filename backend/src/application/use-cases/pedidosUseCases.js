@@ -1,5 +1,11 @@
 import pool from "../../infrastructure/database/database.js";
+
 export class PedidosUseCases {
+
+    constructor({ emailService, usuarioRepository }) {
+        this.emailService = emailService;
+        this.usuarioRepository = usuarioRepository;
+    }
 
     async crear(datos) {
 
@@ -8,6 +14,7 @@ export class PedidosUseCases {
         }
 
         const connection = await pool.getConnection();
+        let pedidoCreado;
 
         try {
             await connection.beginTransaction();
@@ -50,8 +57,10 @@ export class PedidosUseCases {
 
                 detalles.push({
                     productoId: producto.id,
+                    producto: producto.nombre,
                     cantidad: item.cantidad,
-                    precio: producto.precio
+                    precioUnitario: Number(producto.precio),
+                    subtotal
                 });
 
                 await connection.query(
@@ -65,7 +74,7 @@ export class PedidosUseCases {
             const [pedido] = await connection.query(
                 `INSERT INTO pedidos
                  (usuario_id, total, estado)
-                 VALUES (?, ?, 'pendiente')`,
+                 VALUES (?, ?, 'Pendiente de Pago')`,
                 [datos.usuarioId, total]
             );
 
@@ -78,18 +87,19 @@ export class PedidosUseCases {
                         pedido.insertId,
                         detalle.productoId,
                         detalle.cantidad,
-                        detalle.precio
+                        detalle.precioUnitario
                     ]
                 );
             }
 
             await connection.commit();
 
-            return {
+            pedidoCreado = {
                 id: pedido.insertId,
                 usuarioId: datos.usuarioId,
                 total,
-                estado: "pendiente",
+                estado: "Pendiente de Pago",
+                fecha: new Date(),
                 detalles
             };
 
@@ -101,6 +111,56 @@ export class PedidosUseCases {
         } finally {
             connection.release();
         }
+
+        const notificaciones = {
+            cliente: false,
+            administrador: false
+        };
+        let cliente = {};
+
+        try {
+            cliente = await this.usuarioRepository.obtenerPorId(datos.usuarioId);
+        } catch (error) {
+            console.error(
+                `No se pudo consultar el cliente del pedido #${pedidoCreado.id}:`,
+                error
+            );
+        }
+
+        try {
+            if (!cliente?.email) {
+                throw new Error("El cliente no tiene un correo electrónico disponible");
+            }
+
+            await this.emailService.enviarComprobanteCliente({
+                pedido: pedidoCreado,
+                cliente
+            });
+            notificaciones.cliente = true;
+        } catch (error) {
+            console.error(
+                `No se pudo enviar el comprobante del pedido #${pedidoCreado.id} al cliente:`,
+                error
+            );
+        }
+
+        try {
+            await this.emailService.enviarNotificacionAdministrador({
+                pedido: pedidoCreado,
+                cliente: cliente || {}
+            });
+            notificaciones.administrador = true;
+        } catch (error) {
+            console.error(
+                `No se pudo notificar al administrador del pedido #${pedidoCreado.id}:`,
+                error
+            );
+        }
+
+        return {
+            ...pedidoCreado,
+            notificaciones
+        };
     }
 
     async obtenerTodos() {
@@ -134,6 +194,57 @@ export class PedidosUseCases {
             ...pedidos[0],
             detalles
         };
+    }
+
+    async obtenerPorUsuario(usuarioId) {
+        const [rows] = await pool.query(
+            `SELECT
+                p.id,
+                p.usuario_id,
+                p.fecha,
+                p.estado,
+                p.total,
+                d.id AS detalle_id,
+                d.producto_id,
+                pr.nombre AS producto,
+                d.cantidad,
+                d.precio_unitario
+             FROM pedidos p
+             LEFT JOIN detalle_pedido d
+                ON d.pedido_id = p.id
+             LEFT JOIN productos pr
+                ON pr.id = d.producto_id
+             WHERE p.usuario_id = ?
+             ORDER BY p.id DESC, d.id ASC`,
+            [usuarioId]
+        );
+
+        const pedidos = new Map();
+
+        for (const row of rows) {
+            if (!pedidos.has(row.id)) {
+                pedidos.set(row.id, {
+                    id: row.id,
+                    usuario_id: row.usuario_id,
+                    fecha: row.fecha,
+                    estado: row.estado,
+                    total: row.total,
+                    detalles: []
+                });
+            }
+
+            if (row.detalle_id) {
+                pedidos.get(row.id).detalles.push({
+                    id: row.detalle_id,
+                    producto_id: row.producto_id,
+                    producto: row.producto,
+                    cantidad: row.cantidad,
+                    precio_unitario: row.precio_unitario
+                });
+            }
+        }
+
+        return Array.from(pedidos.values());
     }
 
     async actualizar(id, estado) {

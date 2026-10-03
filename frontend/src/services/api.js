@@ -1,8 +1,24 @@
-const API = "http://18.209.101.171:3000/api";
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+async function solicitar(url, opciones, mensajeError) {
+    const response = await fetch(url, opciones);
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error("El servidor devolvió una respuesta inválida");
+    }
+
+    if (!response.ok) {
+        throw new Error(data.mensaje || mensajeError);
+    }
+
+    return data;
+}
 
 export async function login(email, password) {
-
-    const response = await fetch(`${API}/auth/login`, {
+    return solicitar(`${API}/auth/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -11,31 +27,15 @@ export async function login(email, password) {
             email,
             password
         })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.mensaje || "Error al iniciar sesión");
-    }
-
-    return data;
+    }, "Error al iniciar sesión");
 }
 
 export async function obtenerProductos() {
-
-    const response = await fetch(`${API}/productos`);
-
-    if (!response.ok) {
-        throw new Error("Error al obtener productos");
-    }
-
-    return await response.json();
+    return solicitar(`${API}/productos`, undefined, "Error al obtener productos");
 }
 
 export async function crearPedido(usuarioId, productos) {
-
-    const response = await fetch(`${API}/pedidos`, {
+    return solicitar(`${API}/pedidos`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
@@ -44,13 +44,13 @@ export async function crearPedido(usuarioId, productos) {
             usuarioId,
             productos
         })
-    });
+    }, "Error al crear pedido");
+}
 
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.mensaje || "Error al crear pedido");
-    }
-
-    return data;
+export async function obtenerPedidos(usuarioId) {
+    return solicitar(
+        `${API}/pedidos/usuario/${encodeURIComponent(usuarioId)}`,
+        undefined,
+        "Error al obtener tus pedidos"
+    );
 }

@@ -48,6 +48,18 @@ export class PedidoController {
         }
     };
 
+    obtenerPorUsuario = async (req, res) => {
+        try {
+            res.json(
+                await this.useCases.obtenerPorUsuario(req.params.usuarioId)
+            );
+        } catch (error) {
+            res.status(500).json({
+                mensaje: error.message
+            });
+        }
+    };
+
     actualizar = async (req, res) => {
         try {
             res.json(

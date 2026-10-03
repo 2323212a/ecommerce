@@ -16,6 +16,7 @@ import { crearProductoRoutes } from "./infrastructure/routes/productoRoutes.js";
 import { PedidosUseCases } from "./application/use-cases/pedidosUseCases.js";
 import { PedidoController } from "./infrastructure/controllers/pedidoController.js";
 import { crearPedidoRoutes } from "./infrastructure/routes/pedidoRoutes.js";
+import { NodeMailAdapter } from "./infrastructure/adapters/NodeMailAdapter.js";
 
 import { AuthUseCases } from "./application/use-cases/authUseCases.js";
 import { AuthController } from "./infrastructure/controllers/authController.js";
@@ -70,7 +71,11 @@ app.use(
 
 //pedidos
 
-const pedidoUseCases = new PedidosUseCases();
+const emailService = new NodeMailAdapter();
+const pedidoUseCases = new PedidosUseCases({
+    emailService,
+    usuarioRepository
+});
 
 const pedidoController =
     new PedidoController(pedidoUseCases);
