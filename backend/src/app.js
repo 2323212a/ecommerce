@@ -12,6 +12,7 @@ import { ProductoRepository } from "./infrastructure/repositories/productoReposi
 import { ProductoUseCases } from "./application/use-cases/productos/productoUseCases.js";
 import { ProductoController } from "./infrastructure/controllers/productoController.js";
 import { crearProductoRoutes } from "./infrastructure/routes/productoRoutes.js";
+import { autenticar, autorizarRoles } from "./infrastructure/middleware/authMiddleware.js";
 
 import { PedidosUseCases } from "./application/use-cases/pedidosUseCases.js";
 import { PedidoController } from "./infrastructure/controllers/pedidoController.js";
@@ -23,6 +24,10 @@ import { AuthController } from "./infrastructure/controllers/authController.js";
 import { crearAuthRoutes } from "./infrastructure/routes/authRoutes.js";
 
 dotenv.config();
+
+if (!process.env.AUTH_JWT_SECRET) {
+    throw new Error("Define AUTH_JWT_SECRET en backend/.env antes de iniciar el servidor");
+}
 
 const app = express();
 
@@ -40,7 +45,7 @@ const usuarioController =
 
 app.use(
     "/api/usuarios",
-    crearUsuarioRoutes(usuarioController)
+    crearUsuarioRoutes(usuarioController, autenticar, autorizarRoles("admin"))
 );
 // AUTENTICACIÓN
 
@@ -66,7 +71,7 @@ const productoController =
 
 app.use(
     "/api/productos",
-    crearProductoRoutes(productoController)
+    crearProductoRoutes(productoController, autenticar, autorizarRoles)
 );
 
 //pedidos
@@ -82,7 +87,7 @@ const pedidoController =
 
 app.use(
     "/api/pedidos",
-    crearPedidoRoutes(pedidoController)
+    crearPedidoRoutes(pedidoController, autenticar, autorizarRoles)
 );
 
 
@@ -96,12 +101,12 @@ app.get("/", (req, res) => {
 // PRUEBA DE BASE DE DATOS
 app.get("/api/test-db", async (req, res) => {
     try {
-        const [rows] = await pool.query(
+        const { rows } = await pool.query(
             "SELECT 1 AS conectado"
         );
 
         res.json({
-            mensaje: "Conexión a MySQL exitosa",
+            mensaje: "Conexión a PostgreSQL exitosa",
             resultado: rows
         });
 
@@ -109,7 +114,7 @@ app.get("/api/test-db", async (req, res) => {
         console.error(error);
 
         res.status(500).json({
-            mensaje: "Error de conexión a MySQL",
+            mensaje: "Error de conexión a PostgreSQL",
             error: error.message
         });
     }

@@ -13,21 +13,21 @@ export class PedidosUseCases {
             throw new Error("Usuario y productos son obligatorios");
         }
 
-        const connection = await pool.getConnection();
+        const connection = await pool.connect();
         let pedidoCreado;
 
         try {
-            await connection.beginTransaction();
+            await connection.query("BEGIN");
 
             let total = 0;
             const detalles = [];
 
             for (const item of datos.productos) {
 
-                const [rows] = await connection.query(
+                const { rows } = await connection.query(
                     `SELECT id, nombre, precio, stock
                      FROM productos
-                     WHERE id = ?
+                     WHERE id = $1
                      FOR UPDATE`,
                     [item.productoId]
                 );
@@ -65,16 +65,17 @@ export class PedidosUseCases {
 
                 await connection.query(
                     `UPDATE productos
-                     SET stock = stock - ?
-                     WHERE id = ?`,
+                     SET stock = stock - $1
+                     WHERE id = $2`,
                     [item.cantidad, producto.id]
                 );
             }
 
-            const [pedido] = await connection.query(
+            const pedido = await connection.query(
                 `INSERT INTO pedidos
                  (usuario_id, total, estado)
-                 VALUES (?, ?, 'Pendiente de Pago')`,
+                 VALUES ($1, $2, 'Pendiente de Pago')
+                 RETURNING id`,
                 [datos.usuarioId, total]
             );
 
@@ -82,9 +83,9 @@ export class PedidosUseCases {
                 await connection.query(
                     `INSERT INTO detalle_pedido
                      (pedido_id, producto_id, cantidad, precio_unitario)
-                     VALUES (?, ?, ?, ?)`,
+                     VALUES ($1, $2, $3, $4)`,
                     [
-                        pedido.insertId,
+                        pedido.rows[0].id,
                         detalle.productoId,
                         detalle.cantidad,
                         detalle.precioUnitario
@@ -92,10 +93,10 @@ export class PedidosUseCases {
                 );
             }
 
-            await connection.commit();
+            await connection.query("COMMIT");
 
             pedidoCreado = {
-                id: pedido.insertId,
+                id: pedido.rows[0].id,
                 usuarioId: datos.usuarioId,
                 total,
                 estado: "Pendiente de Pago",
@@ -105,7 +106,7 @@ export class PedidosUseCases {
 
         } catch (error) {
 
-            await connection.rollback();
+            await connection.query("ROLLBACK");
             throw error;
 
         } finally {
@@ -164,7 +165,7 @@ export class PedidosUseCases {
     }
 
     async obtenerTodos() {
-        const [rows] = await pool.query(`
+        const { rows } = await pool.query(`
             SELECT * FROM pedidos
             ORDER BY id DESC
         `);
@@ -174,19 +175,19 @@ export class PedidosUseCases {
 
     async obtenerPorId(id) {
 
-        const [pedidos] = await pool.query(
-            `SELECT * FROM pedidos WHERE id = ?`,
+        const { rows: pedidos } = await pool.query(
+            `SELECT * FROM pedidos WHERE id = $1`,
             [id]
         );
 
         if (!pedidos[0]) return null;
 
-        const [detalles] = await pool.query(
+        const { rows: detalles } = await pool.query(
             `SELECT d.*, p.nombre
              FROM detalle_pedido d
              INNER JOIN productos p
              ON p.id = d.producto_id
-             WHERE d.pedido_id = ?`,
+             WHERE d.pedido_id = $1`,
             [id]
         );
 
@@ -197,7 +198,7 @@ export class PedidosUseCases {
     }
 
     async obtenerPorUsuario(usuarioId) {
-        const [rows] = await pool.query(
+        const { rows } = await pool.query(
             `SELECT
                 p.id,
                 p.usuario_id,
@@ -214,7 +215,7 @@ export class PedidosUseCases {
                 ON d.pedido_id = p.id
              LEFT JOIN productos pr
                 ON pr.id = d.producto_id
-             WHERE p.usuario_id = ?
+             WHERE p.usuario_id = $1
              ORDER BY p.id DESC, d.id ASC`,
             [usuarioId]
         );
@@ -249,12 +250,12 @@ export class PedidosUseCases {
 
     async actualizar(id, estado) {
 
-        const [result] = await pool.query(
-            `UPDATE pedidos SET estado = ? WHERE id = ?`,
+        const result = await pool.query(
+            `UPDATE pedidos SET estado = $1 WHERE id = $2`,
             [estado, id]
         );
 
-        if (!result.affectedRows) {
+        if (!result.rowCount) {
             throw new Error("Pedido no encontrado");
         }
 
@@ -263,12 +264,12 @@ export class PedidosUseCases {
 
     async eliminar(id) {
 
-        const [result] = await pool.query(
-            `DELETE FROM pedidos WHERE id = ?`,
+        const result = await pool.query(
+            `DELETE FROM pedidos WHERE id = $1`,
             [id]
         );
 
-        if (!result.affectedRows) {
+        if (!result.rowCount) {
             throw new Error("Pedido no encontrado");
         }
 

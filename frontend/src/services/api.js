@@ -34,11 +34,23 @@ export async function obtenerProductos() {
     return solicitar(`${API}/productos`, undefined, "Error al obtener productos");
 }
 
-export async function crearPedido(usuarioId, productos) {
+export async function crearProducto(producto, token) {
+    return solicitar(`${API}/productos`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(producto)
+    }, "Error al agregar el producto");
+}
+
+export async function crearPedido(usuarioId, productos, token) {
     return solicitar(`${API}/pedidos`, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
             usuarioId,
@@ -47,10 +59,14 @@ export async function crearPedido(usuarioId, productos) {
     }, "Error al crear pedido");
 }
 
-export async function obtenerPedidos(usuarioId) {
+export async function obtenerPedidos(usuarioId, token) {
     return solicitar(
         `${API}/pedidos/usuario/${encodeURIComponent(usuarioId)}`,
-        undefined,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        },
         "Error al obtener tus pedidos"
     );
 }

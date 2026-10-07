@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
     login,
     obtenerProductos,
+    crearProducto,
     crearPedido,
     obtenerPedidos
 } from "./services/api";
@@ -13,6 +14,7 @@ function App() {
     const [password, setPassword] = useState("");
 
     const [usuario, setUsuario] = useState(null);
+    const [token, setToken] = useState("");
     const [productos, setProductos] = useState([]);
     const [pedidos, setPedidos] = useState([]);
     const [vista, setVista] = useState("inicio");
@@ -21,12 +23,20 @@ function App() {
 
     const [mensaje, setMensaje] = useState("");
     const [busqueda, setBusqueda] = useState("");
+    const [productoForm, setProductoForm] = useState({
+        nombre: "",
+        descripcion: "",
+        precio: "",
+        stock: ""
+    });
+    const puedeAgregarProductos =
+        usuario && ["admin", "empleado"].includes(usuario.rol);
 
     useEffect(() => {
         if (usuario) {
             cargarProductos();
         }
-    }, [usuario]);
+    }, [usuario, token]);
 
     async function cargarProductos() {
         try {
@@ -57,7 +67,7 @@ function App() {
         setCargandoPedidos(true);
 
         try {
-            setPedidos(await obtenerPedidos(usuario.id));
+            setPedidos(await obtenerPedidos(usuario.id, token));
         } catch (error) {
             setMensaje(error.message);
         } finally {
@@ -72,6 +82,7 @@ function App() {
             const data = await login(email, password);
 
             setUsuario(data.usuario);
+            setToken(data.token);
             setMensaje("");
         } catch (error) {
             setMensaje(error.message);
@@ -87,7 +98,8 @@ function App() {
                         productoId: producto.id,
                         cantidad: 1
                     }
-                ]
+                ],
+                token
             );
 
             setPedidoCreado(pedido);
@@ -99,8 +111,35 @@ function App() {
         }
     }
 
+    async function agregarProducto(e) {
+        e.preventDefault();
+        setMensaje("");
+
+        try {
+            await crearProducto(
+                {
+                    ...productoForm,
+                    precio: Number(productoForm.precio),
+                    stock: Number(productoForm.stock)
+                },
+                token
+            );
+            setProductoForm({
+                nombre: "",
+                descripcion: "",
+                precio: "",
+                stock: ""
+            });
+            setMensaje("Producto agregado correctamente.");
+            await cargarProductos();
+        } catch (error) {
+            setMensaje(error.message);
+        }
+    }
+
     function cerrarSesion() {
         setUsuario(null);
+        setToken("");
         setPedidos([]);
         setPedidoCreado(null);
         setVista("inicio");
@@ -267,7 +306,13 @@ function App() {
 
                         <div className="user-info">
                             <strong>{usuario.nombre}</strong>
-                            <span>Cliente</span>
+                            <span>
+                                {{
+                                    admin: "Administrador",
+                                    empleado: "Empleado",
+                                    cliente: "Cliente"
+                                }[usuario.rol] || usuario.rol}
+                            </span>
                         </div>
 
                         <button
@@ -346,6 +391,71 @@ function App() {
             {vista !== "pedidos" ? (
                 <main className="main-content" id="catalogo">
 
+                {puedeAgregarProductos && (
+                    <form className="product-admin-form" onSubmit={agregarProducto}>
+                        <div className="product-admin-heading">
+                            <span className="section-label">INVENTARIO</span>
+                            <h2>Agregar producto</h2>
+                            <p>Registra un producto nuevo en el catálogo.</p>
+                        </div>
+                        <div className="product-admin-fields">
+                            <label>
+                                Nombre
+                                <input
+                                    value={productoForm.nombre}
+                                    onChange={(e) => setProductoForm({
+                                        ...productoForm,
+                                        nombre: e.target.value
+                                    })}
+                                    required
+                                />
+                            </label>
+                            <label>
+                                Descripción
+                                <input
+                                    value={productoForm.descripcion}
+                                    onChange={(e) => setProductoForm({
+                                        ...productoForm,
+                                        descripcion: e.target.value
+                                    })}
+                                />
+                            </label>
+                            <label>
+                                Precio
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={productoForm.precio}
+                                    onChange={(e) => setProductoForm({
+                                        ...productoForm,
+                                        precio: e.target.value
+                                    })}
+                                    required
+                                />
+                            </label>
+                            <label>
+                                Stock
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={productoForm.stock}
+                                    onChange={(e) => setProductoForm({
+                                        ...productoForm,
+                                        stock: e.target.value
+                                    })}
+                                    required
+                                />
+                            </label>
+                        </div>
+                        <button className="login-button product-submit-button" type="submit">
+                            Guardar producto
+                            <span>→</span>
+                        </button>
+                    </form>
+                )}
+
                 <div className="section-header">
 
                     <div>
@@ -382,8 +492,19 @@ function App() {
                 {/* MENSAJE */}
 
                 {mensaje && (
-                    <div className="error-message page-error">
-                        ⚠ {mensaje}
+                    <div
+                        className={
+                            mensaje === "Producto agregado correctamente."
+                                ? "success-message page-error"
+                                : "error-message page-error"
+                        }
+                        role={
+                            mensaje === "Producto agregado correctamente."
+                                ? "status"
+                                : "alert"
+                        }
+                    >
+                        {mensaje === "Producto agregado correctamente." ? "✓" : "⚠"} {mensaje}
                     </div>
                 )}
 

@@ -10,7 +10,7 @@ export class AuthController {
 
             const { email, password } = req.body;
 
-            const usuario =
+            const sesion =
                 await this.authUseCases.login(
                     email,
                     password
@@ -18,7 +18,13 @@ export class AuthController {
 
             res.json({
                 mensaje: "Login exitoso",
-                usuario
+                usuario: {
+                    id: sesion.id,
+                    nombre: sesion.nombre,
+                    email: sesion.email,
+                    rol: sesion.rol
+                },
+                token: sesion.token
             });
 
         } catch (error) {

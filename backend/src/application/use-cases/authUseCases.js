@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 export class AuthUseCases {
 
@@ -33,7 +34,17 @@ export class AuthUseCases {
             id: usuario.id,
             nombre: usuario.nombre,
             email: usuario.email,
-            rol: usuario.rol
+            rol: usuario.rol,
+            token: jwt.sign(
+                {
+                    sub: String(usuario.id),
+                    nombre: usuario.nombre,
+                    email: usuario.email,
+                    rol: usuario.rol
+                },
+                process.env.AUTH_JWT_SECRET,
+                { expiresIn: "8h", algorithm: "HS256" }
+            )
         };
     }
 }

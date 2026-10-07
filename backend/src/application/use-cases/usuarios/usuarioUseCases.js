@@ -21,6 +21,11 @@ export class UsuarioUseCases {
             throw new Error("Nombre, email y contraseña son obligatorios");
         }
 
+        const rol = datos.rol || "cliente";
+        if (!["admin", "empleado", "cliente"].includes(rol)) {
+            throw new Error("El rol debe ser admin, empleado o cliente");
+        }
+
         const usuarioExistente =
             await this.usuarioRepository.obtenerPorEmail(datos.email);
 
@@ -34,7 +39,7 @@ export class UsuarioUseCases {
             nombre: datos.nombre,
             email: datos.email,
             passwordHash,
-            rol: datos.rol || "cliente"
+            rol
         });
 
         return await this.usuarioRepository.crear(usuario);
@@ -47,6 +52,10 @@ export class UsuarioUseCases {
 
         if (!usuarioExistente) {
             throw new Error("Usuario no encontrado");
+        }
+
+        if (!["admin", "empleado", "cliente"].includes(datos.rol)) {
+            throw new Error("El rol debe ser admin, empleado o cliente");
         }
 
         return await this.usuarioRepository.actualizar(id, {

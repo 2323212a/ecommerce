@@ -1,8 +1,10 @@
 import express from "express";
 
-export function crearUsuarioRoutes(usuarioController) {
+export function crearUsuarioRoutes(usuarioController, autenticar, autorizarRoles) {
 
     const router = express.Router();
+
+    router.use(autenticar, autorizarRoles("admin"));
 
     router.get("/", usuarioController.obtenerTodos);
 

@@ -3,7 +3,7 @@ import pool from "../database/database.js";
 export class UsuarioRepository {
 
     async obtenerTodos() {
-        const [rows] = await pool.query(`
+        const { rows } = await pool.query(`
             SELECT id, nombre, email, rol, created_at
             FROM usuarios
             ORDER BY id
@@ -13,10 +13,10 @@ export class UsuarioRepository {
     }
 
     async obtenerPorId(id) {
-        const [rows] = await pool.query(
+        const { rows } = await pool.query(
             `SELECT id, nombre, email, rol, created_at
              FROM usuarios
-             WHERE id = ?`,
+             WHERE id = $1`,
             [id]
         );
 
@@ -24,10 +24,10 @@ export class UsuarioRepository {
     }
 
     async obtenerPorEmail(email) {
-        const [rows] = await pool.query(
+        const { rows } = await pool.query(
             `SELECT *
              FROM usuarios
-             WHERE email = ?`,
+             WHERE email = $1`,
             [email]
         );
 
@@ -35,10 +35,11 @@ export class UsuarioRepository {
     }
 
     async crear(usuario) {
-        const [result] = await pool.query(
+        const { rows } = await pool.query(
             `INSERT INTO usuarios
              (nombre, email, password_hash, rol)
-             VALUES (?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4)
+             RETURNING id`,
             [
                 usuario.nombre,
                 usuario.email,
@@ -47,14 +48,14 @@ export class UsuarioRepository {
             ]
         );
 
-        return this.obtenerPorId(result.insertId);
+        return this.obtenerPorId(rows[0].id);
     }
 
     async actualizar(id, usuario) {
         await pool.query(
             `UPDATE usuarios
-             SET nombre = ?, email = ?, rol = ?
-             WHERE id = ?`,
+             SET nombre = $1, email = $2, rol = $3
+             WHERE id = $4`,
             [
                 usuario.nombre,
                 usuario.email,
@@ -67,11 +68,11 @@ export class UsuarioRepository {
     }
 
     async eliminar(id) {
-        const [result] = await pool.query(
-            `DELETE FROM usuarios WHERE id = ?`,
+        const result = await pool.query(
+            `DELETE FROM usuarios WHERE id = $1`,
             [id]
         );
 
-        return result.affectedRows > 0;
+        return result.rowCount > 0;
     }
 }

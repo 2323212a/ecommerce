@@ -6,7 +6,10 @@ export class PedidoController {
 
     crear = async (req, res) => {
         try {
-            const pedido = await this.useCases.crear(req.body);
+            const pedido = await this.useCases.crear({
+                ...req.body,
+                usuarioId: req.usuario.sub
+            });
 
             res.status(201).json(pedido);
 
@@ -39,6 +42,15 @@ export class PedidoController {
                 });
             }
 
+            if (
+                req.usuario.rol !== "admin" &&
+                String(pedido.usuario_id) !== req.usuario.sub
+            ) {
+                return res.status(403).json({
+                    mensaje: "No tienes permiso para consultar este pedido"
+                });
+            }
+
             res.json(pedido);
 
         } catch (error) {
@@ -50,6 +62,15 @@ export class PedidoController {
 
     obtenerPorUsuario = async (req, res) => {
         try {
+            if (
+                req.usuario.rol !== "admin" &&
+                req.params.usuarioId !== req.usuario.sub
+            ) {
+                return res.status(403).json({
+                    mensaje: "No tienes permiso para consultar estos pedidos"
+                });
+            }
+
             res.json(
                 await this.useCases.obtenerPorUsuario(req.params.usuarioId)
             );

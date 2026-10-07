@@ -1,6 +1,10 @@
 import express from "express";
 
-export function crearProductoRoutes(productoController) {
+export function crearProductoRoutes(
+    productoController,
+    autenticar,
+    autorizarRoles
+) {
 
     const router = express.Router();
 
@@ -8,11 +12,26 @@ export function crearProductoRoutes(productoController) {
 
     router.get("/:id", productoController.obtenerPorId);
 
-    router.post("/", productoController.crear);
+    router.post(
+        "/",
+        autenticar,
+        autorizarRoles("admin", "empleado"),
+        productoController.crear
+    );
 
-    router.put("/:id", productoController.actualizar);
+    router.put(
+        "/:id",
+        autenticar,
+        autorizarRoles("admin"),
+        productoController.actualizar
+    );
 
-    router.delete("/:id", productoController.eliminar);
+    router.delete(
+        "/:id",
+        autenticar,
+        autorizarRoles("admin"),
+        productoController.eliminar
+    );
 
     return router;
 }
