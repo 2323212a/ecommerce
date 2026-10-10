@@ -23,6 +23,11 @@ import { AuthUseCases } from "./application/use-cases/authUseCases.js";
 import { AuthController } from "./infrastructure/controllers/authController.js";
 import { crearAuthRoutes } from "./infrastructure/routes/authRoutes.js";
 
+import { AnalyticsRepositoryAdapter } from "./infrastructure/repositories/analyticsRepositoryAdapter.js";
+import { AnalyticsService } from "./application/use-cases/analytics/analyticsService.js";
+import { ReportesController } from "./infrastructure/controllers/reportesController.js";
+import { crearReportesRoutes } from "./infrastructure/routes/reportesRoutes.js";
+
 dotenv.config();
 
 if (!process.env.AUTH_JWT_SECRET) {
@@ -90,6 +95,15 @@ app.use(
     crearPedidoRoutes(pedidoController, autenticar, autorizarRoles)
 );
 
+// REPORTES
+const analyticsRepository = new AnalyticsRepositoryAdapter();
+const analyticsService = new AnalyticsService(analyticsRepository);
+const reportesController = new ReportesController(analyticsService);
+
+app.use(
+    "/api/reportes",
+    crearReportesRoutes(reportesController, autenticar, autorizarRoles)
+);
 
 // RUTA PRINCIPAL
 app.get("/", (req, res) => {

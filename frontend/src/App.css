@@ -737,6 +737,208 @@ button {
 }
 
 /* =========================================
+   DASHBOARD ADMIN
+========================================= */
+
+.dashboard-admin {
+    padding-top: 28px;
+}
+
+.dashboard-header {
+    margin-bottom: 24px;
+}
+
+.dashboard-header h2 {
+    margin: 0 0 6px;
+    color: var(--dark);
+    font-size: 32px;
+}
+
+.dashboard-header p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.dashboard-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+
+.dashboard-preset-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.dashboard-preset {
+    border: 1px solid var(--border);
+    background: #fafafd;
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.dashboard-preset.active,
+.dashboard-preset:hover {
+    background: #f0efff;
+    border-color: #d9d7ff;
+    color: var(--primary);
+}
+
+.dashboard-rango-personalizado {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.dashboard-rango-personalizado label {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.dashboard-rango-personalizado input {
+    border: 1px solid var(--border);
+    background: #fafafd;
+    border-radius: 10px;
+    min-height: 42px;
+    padding: 0 12px;
+    color: var(--dark);
+}
+
+.dashboard-grid-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.dashboard-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px 18px;
+    box-shadow: 0 10px 25px rgba(30, 30, 70, 0.04);
+}
+
+.resumen-card strong {
+    display: block;
+    margin-top: 12px;
+    font-size: 28px;
+    color: var(--dark);
+}
+
+.dashboard-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.dashboard-card-header span,
+.dashboard-card-header h3 {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+}
+
+.resumen-card small {
+    display: block;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.resumen-card small.positivo {
+    color: var(--success);
+}
+
+.resumen-card small.negativo {
+    color: var(--danger);
+}
+
+.dashboard-metricas-extra {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.metric-card span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.metric-card strong {
+    color: var(--dark);
+    font-size: 24px;
+}
+
+.dashboard-grid-two {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.chart-card {
+    min-height: 360px;
+}
+
+.dashboard-table-wrap {
+    overflow-x: auto;
+}
+
+.table-card table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table-card th,
+.table-card td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+.table-card th {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.table-card td {
+    color: var(--dark);
+}
+
+.empty-table {
+    text-align: center;
+    color: var(--muted);
+    padding: 24px 8px;
+}
+
+/* =========================================
    MENSAJE
 ========================================= */
 
@@ -1189,6 +1391,13 @@ button {
 ========================================= */
 
 @media (max-width: 850px) {
+    .dashboard-grid-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-grid-two {
+        grid-template-columns: 1fr;
+    }
 
     .nav-links {
         display: flex;
@@ -1224,6 +1433,11 @@ button {
 }
 
 @media (max-width: 600px) {
+    .dashboard-grid-cards,
+    .dashboard-metricas-extra {
+        grid-template-columns: 1fr;
+    }
+
     .product-admin-fields {
         grid-template-columns: 1fr;
     }
